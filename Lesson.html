@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LMS.ge — გაკვეთილი</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { margin-top: 64px; }
+
+    .lesson-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      min-height: calc(100vh - 64px);
+    }
+
+    /* LEFT: VIDEO + CONTENT */
+    .lesson-main { overflow-y: auto; }
+
+    .video-area {
+      background: #000;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .video-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      color: rgba(255,255,255,0.5);
+    }
+    .play-btn {
+      width: 72px; height: 72px;
+      background: rgba(108,99,255,0.85);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+      border: none;
+      color: #fff;
+      font-size: 1.5rem;
+    }
+    .play-btn:hover { transform: scale(1.08); background: var(--accent); }
+
+    /* Video controls bar */
+    .video-controls {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 1rem;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .vc-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.8);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+      transition: color 0.15s;
+    }
+    .vc-btn:hover { color: #fff; }
+    .progress-bar-video {
+      flex: 1;
+      height: 3px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 100px;
+      cursor: pointer;
+      position: relative;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 100px;
+      transition: width 0.3s;
+    }
+    .vc-time { font-size: 12px; color: rgba(255,255,255,0.7); min-width: 80px; text-align: right; }
+
+    .lesson-content-area { padding: 1.75rem; }
+
+    .lesson-header { margin-bottom: 1.5rem; }
+    .lesson-header h1 {
+      font-family: var(--font-head);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .lesson-meta { display: flex; gap: 16px; font-size: 13px; color: var(--muted); }
+
+    .content-tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .content-tab {
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: var(--font-body);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+    }
+    .content-tab:hover { color: var(--text); }
+    .content-tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeIn 0.2s ease; }
+
+    /* TEXT CONTENT */
+    .lesson-text { font-size: 15px; line-height: 1.75; color: var(--text); }
+    .lesson-text h3 {
+      font-family: var(--font-head);
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin: 1.5rem 0 0.5rem;
+      color: var(--text);
+    }
+    .lesson-text p { margin-bottom: 1rem; color: var(--muted); }
+    .lesson-text code {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: var(--accent2);
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #e8e8e8;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    .code-block .kw  { color: #c792ea; }
+    .code-block .fn  { color: #82aaff; }
+    .code-block .str { color: #c3e88d; }
+    .code-block .cm  { color: #546e7a; }
+    .code-block .num { color: #f78c6c; }
+
+    /* ASSIGNMENT */
+    .assignment-card {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .assignment-card h4 {
+      font-family: var(--font-head);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .assignment-card p { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+    .assignment-textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    /* RIGHT: SIDEBAR */
+    .lesson-sidebar {
+      background: var(--bg2);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 64px);
+    }
+
+    .sidebar-course-header {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-course-title {
+      font-family: var(--font-head);
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .lesson-list { padding: 0.5rem 0; }
+    .lesson-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 1.25rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .lesson-item:hover { background: var(--bg3); }
+    .lesson-item.active { background: var(--accent-bg); }
+    .lesson-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .lesson-item.active .lesson-num {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .lesson-item.completed .lesson-num {
+      background: var(--green-bg);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .lesson-item-info { flex: 1; }
+    .lesson-item-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+    .lesson-item-dur   { font-size: 11px; color: var(--muted); }
+
+    .enroll-banner {
+      margin: 1.25rem;
+      background: var(--accent-bg);
+      border: 1px solid rgba(108,99,255,0.25);
+      border-radius: var(--radius);
+      padding: 1rem;
+      text-align: center;
+    }
+    .enroll-banner h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .enroll-banner p  { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+
+    /* MOBILE: stack layout */
+    @media (max-width: 768px) {
+      .lesson-layout { grid-template-columns: 1fr; }
+      .lesson-sidebar { position: static; height: auto; border-left: none; border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar"></nav>
+
+  <div class="lesson-layout" id="lesson-app">
+    <div style="display:flex;align-items:center;justify-content:center;height:60vh;color:var(--muted)">
+      ⏳ იტვირთება...
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderNavbar({ activePage: 'home' });
+
+    const courseId = parseInt(getParam('course')) || 1;
+    const user     = Auth.getUser();
+    let   activeLessonIdx = 0;
+    let   videoProgress   = 0;
+    let   videoPlaying    = false;
+    let   videoTimer      = null;
+    let   completedLessons = new Set(JSON.parse(localStorage.getItem('lms_completed_' + courseId) || '[]'));
+
+    function saveCompleted() {
+      localStorage.setItem('lms_completed_' + courseId, JSON.stringify([...completedLessons]));
+    }
+
+    function init() {
+      const course  = Courses.byId(courseId);
+      const lessons = Courses.lessons(courseId);
+
+      if (!course) {
+        document.getElementById('lesson-app').innerHTML = '<div style="text-align:center;padding:4rem;color:var(--muted)"><p>კურსი ვერ მოიძებნა</p><a href="index.html" class="btn btn-primary mt-2">უკან</a></div>';
+        return;
+      }
+
+      const enrolled = user && Courses.isEnrolled(user.id, courseId);
+      const enrollment = enrolled ? Courses.enrollment(user.id, courseId) : null;
+
+      renderPage(course, lessons, enrolled, enrollment);
+    }
+
+    function renderPage(course, lessons, enrolled, enrollment) {
+      const lesson = lessons[activeLessonIdx] || lessons[0];
+      if (!lesson) return;
+
+      document.title = `LMS.ge — ${lesson.title}`;
+
+      document.getElementById('lesson-app').innerHTML = `
+        <!-- MAIN -->
+        <div class="lesson-main">
+
+          <!-- VIDEO -->
+          <div class="video-area">
+            <div class="video-placeholder">
+              <button class="play-btn" id="play-btn" onclick="toggleVideo()">▶</button>
+              <span style="font-size:14px">${lesson.title}</span>
+            </div>
+            <div class="video-controls">
+              <button class="vc-btn" id="vc-play" onclick="toggleVideo()">▶</button>
+              <div class="progress-bar-video" onclick="seekVideo(event)">
+                <div class="progress-bar-fill" id="video-progress-fill" style="width:${videoProgress}%"></div>
+              </div>
+              <span class="vc-time" id="vc-time">0:00 / ${lesson.duration}</span>
+            </div>
+          </div>
+
+          <!-- LESSON CONTENT -->
+          <div class="lesson-content-area">
+            <div class="lesson-header">
+              <h1>${lesson.title}</h1>
+              <div class="lesson-meta">
+                <span>⏱ ${lesson.duration}</span>
+                <span>📖 გაკვეთილი ${lesson.order} / ${lessons.length}</span>
+                ${completedLessons.has(lesson.id) ? '<span class="badge badge-green">✓ დასრულებულია</span>' : ''}
+              </div>
+            </div>
+
+            <div class="content-tabs">
+              <button class="content-tab active" onclick="switchTab('notes', this)">📝 კონსპექტი</button>
+              <button class="content-tab" onclick="switchTab('code', this)">💻 კოდი</button>
+              <button class="content-tab" onclick="switchTab('assignment', this)">📋 დავალება</button>
+            </div>
+
+            <!-- NOTES -->
+            <div class="tab-panel active" id="tab-notes">
+              <div class="lesson-text">
+                <h3>გაკვეთილის მიზანი</h3>
+                <p>ამ გაკვეთილში ვისწავლით <code>${lesson.title}</code>-ს — ერთ-ერთ მნიშვნელოვანი კონცეფცია JavaScript-ში. კარგი გააზრება გვეხმარება უკეთ სტრუქტურირებული და ეფექტური კოდის დაწერაში.</p>
+
+                <h3>ძირითადი კონცეფციები</h3>
+                <p>JavaScript-ი ასინქრონული ენაა. ეს ნიშნავს, რომ ოპერაციები (ქსელის მოთხოვნები, I/O) კოდის შეჩერების გარეშე სრულდება. <code>Promise</code>-ები და <code>async/await</code> სინტაქსი ამ პრობლემის ელეგანტური გადაწყვეტაა.</p>
+
+                <h3>რატომ არის მნიშვნელოვანი?</h3>
+                <p>თანამედროვე web-აპლიკაციების 90%-ი ასინქრონულ ოპერაციებს იყენებს. API-ის გამოძახება, ფაილის წაკითხვა, Database-ის query — ყველაფერი ასინქრონულია. ეს კონცეფციის ცოდნა საბაზო მოთხოვნაა.</p>
+
+                <h3>სასარგებლო რესურსები</h3>
+                <p>სრული განხილვისთვის გასინჯე <code>MDN Web Docs</code> — JavaScript-ის ყველაზე სრული დოკუმენტაცია.</p>
+              </div>
+            </div>
+
+            <!-- CODE -->
+            <div class="tab-panel" id="tab-code">
+              <div class="code-block">
+<span class="cm">// Callback Hell — ძველი მიდგომა</span>
+<span class="fn">fetchUser</span>(<span class="num">1</span>, <span class="kw">function</span>(user) {
+  <span class="fn">fetchPosts</span>(user.id, <span class="kw">function</span>(posts) {
+    <span class="fn">fetchComments</span>(posts[<span class="num">0</span>].id, <span class="kw">function</span>(comments) {
+      console.<span class="fn">log</span>(comments); <span class="cm">// 😵</span>
+    });
+  });
+});
+
+<span class="cm">// ✅ Promise chain — გაუმჯობესება</span>
+<span class="fn">fetchUser</span>(<span class="num">1</span>)
+  .<span class="fn">then</span>(user => <span class="fn">fetchPosts</span>(user.id))
+  .<span class="fn">then</span>(posts => <span class="fn">fetchComments</span>(posts[<span class="num">0</span>].id))
+  .<span class="fn">then</span>(comments => console.<span class="fn">log</span>(comments))
+  .<span class="fn">catch</span>(err => console.<span class="fn">error</span>(err));
+
+<span class="cm">// 🚀 async/await — საუკეთესო მიდგომა</span>
+<span class="kw">async function</span> <span class="fn">loadData</span>() {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> user     = <span class="kw">await</span> <span class="fn">fetchUser</span>(<span class="num">1</span>);
+    <span class="kw">const</span> posts    = <span class="kw">await</span> <span class="fn">fetchPosts</span>(user.id);
+    <span class="kw">const</span> comments = <span class="kw">await</span> <span class="fn">fetchComments</span>(posts[<span class="num">0</span>].id);
+    <span class="kw">return</span> comments;
+  } <span class="kw">catch</span> (err) {
+    console.<span class="fn">error</span>(<span class="str">'შეცდომა:'</span>, err);
+  }
+}
+              </div>
+              <p class="text-sm text-muted mt-2">კოდი შეგიძლია ბრაუზერის Console-ში გაუშვა (F12 → Console)</p>
+            </div>
+
+            <!-- ASSIGNMENT -->
+            <div class="tab-panel" id="tab-assignment">
+              <div class="assignment-card">
+                <h4>📋 პრაქტიკული დავალება</h4>
+                <p>დაწერე <code>async</code> ფუნქცია, რომელიც სიმულირებს API-ს გამოძახებას <code>setTimeout</code>-ით (1 წამი), და აბრუნებს მომხმარებლის სიას.</p>
+                ${user ? `
+                  <textarea class="form-input assignment-textarea" id="assignment-answer" placeholder="// შეიყვანე შენი კოდი აქ...
+async function getUsers() {
+  // ...
+}"></textarea>
+                  <div class="flex gap-1 mt-2">
+                    <button class="btn btn-primary" onclick="submitAssignment()">გაგზავნა →</button>
+                    <button class="btn btn-ghost" onclick="document.getElementById('assignment-answer').value=''">გასუფთავება</button>
+                  </div>
+                ` : `
+                  <p style="color:var(--amber)">⚠️ დავალების გასაგზავნად შედი სისტემაში.</p>
+                  <a href="auth.html" class="btn btn-primary btn-sm">შესვლა →</a>
+                `}
+              </div>
+            </div>
+
+            <!-- NAVIGATION -->
+            <div class="flex justify-between mt-4">
+              <button class="btn btn-ghost" onclick="prevLesson()" ${activeLessonIdx === 0 ? 'disabled style="opacity:0.4"' : ''}>
+                ← წინა
+              </button>
+              <button class="btn btn-primary" onclick="completeAndNext()">
+                ${completedLessons.has(lesson.id) ? 'შემდეგი →' : 'დასრულება + შემდეგი →'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <aside class="lesson-sidebar">
+          <div class="sidebar-course-header">
+            <div class="sidebar-course-title">${course.title}</div>
+
+            ${enrollment ? `
+              <div class="text-sm text-muted mb-1">პროგრესი: ${enrollment.progress}%</div>
+              <div class="progress-wrap"><div class="progress-fill" style="width:${enrollment.progress}%"></div></div>
+            ` : ''}
+          </div>
+
+          ${!user || !Courses.isEnrolled(user?.id, courseId) ? `
+            <div class="enroll-banner">
+              <h4>📚 კურსზე რეგისტრაცია</h4>
+              <p>სრული წვდომა ყველა გაკვეთილზე</p>
+              ${user
+                ? `<button class="btn btn-primary w-full" onclick="enrollNow()">დარეგისტრირება</button>`
+                : `<a href="auth.html" class="btn btn-primary w-full">შესვლა →</a>`
+              }
+            </div>
+          ` : ''}
+
+          <div class="lesson-list">
+            ${lessons.map((l, i) => `
+              <button class="lesson-item ${i === activeLessonIdx ? 'active' : ''} ${completedLessons.has(l.id) ? 'completed' : ''}"
+                      onclick="setLesson(${i})">
+                <div class="lesson-num">
+                  ${completedLessons.has(l.id) ? '✓' : l.order}
+                </div>
+                <div class="lesson-item-info">
+                  <div class="lesson-item-title">${l.title}</div>
+                  <div class="lesson-item-dur">⏱ ${l.duration}</div>
+                </div>
+              </button>
+            `).join('')}
+          </div>
+        </aside>
+      `;
+    }
+
+    function switchTab(name, btn) {
+      document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    // VIDEO
+    function toggleVideo() {
+      videoPlaying = !videoPlaying;
+      const playBtn = document.getElementById('play-btn');
+      const vcPlay  = document.getElementById('vc-play');
+      if (videoPlaying) {
+        if (playBtn) playBtn.textContent = '⏸';
+        if (vcPlay)  vcPlay.textContent = '⏸';
+        videoTimer = setInterval(() => {
+          videoProgress = Math.min(videoProgress + 0.5, 100);
+          document.getElementById('video-progress-fill').style.width = videoProgress + '%';
+          const mins = Math.floor(videoProgress * 0.45);
+          const secs = Math.floor((videoProgress * 0.45 % 1) * 60);
+          document.getElementById('vc-time').textContent =
+            `${mins}:${secs.toString().padStart(2,'0')} / ${Courses.lessons(courseId)[activeLessonIdx]?.duration || ''}`;
+          if (videoProgress >= 100) { clearInterval(videoTimer); videoPlaying = false; }
+        }, 300);
+      } else {
+        clearInterval(videoTimer);
+        if (playBtn) playBtn.textContent = '▶';
+        if (vcPlay)  vcPlay.textContent = '▶';
+      }
+    }
+
+    function seekVideo(e) {
+      const bar = e.currentTarget;
+      const ratio = e.offsetX / bar.offsetWidth;
+      videoProgress = ratio * 100;
+      document.getElementById('video-progress-fill').style.width = videoProgress + '%';
+    }
+
+    function setLesson(idx) {
+      videoProgress = 0;
+      videoPlaying  = false;
+      clearInterval(videoTimer);
+      activeLessonIdx = idx;
+      const course  = Courses.byId(courseId);
+      const lessons = Courses.lessons(courseId);
+      const enrolled = user && Courses.isEnrolled(user.id, courseId);
+      const enrollment = enrolled ? Courses.enrollment(user.id, courseId) : null;
+      renderPage(course, lessons, enrolled, enrollment);
+    }
+
+    function prevLesson() {
+      if (activeLessonIdx > 0) setLesson(activeLessonIdx - 1);
+    }
+
+    function completeAndNext() {
+      const lessons = Courses.lessons(courseId);
+      const lesson  = lessons[activeLessonIdx];
+      completedLessons.add(lesson.id);
+      saveCompleted();
+
+      // Update progress
+      if (user && Courses.isEnrolled(user.id, courseId)) {
+        const progress = Math.round((completedLessons.size / lessons.length) * 100);
+        Courses.updateProgress(user.id, courseId, progress);
+        toast(`პროგრესი: ${progress}% ✓`, 'success');
+      }
+
+      if (activeLessonIdx < lessons.length - 1) {
+        setLesson(activeLessonIdx + 1);
+      } else {
+        toast('🎉 კურსი დასრულებულია! გილოცავ!', 'success');
+        setLesson(activeLessonIdx);
+      }
+    }
+
+    function enrollNow() {
+      if (!user) { window.location.href = 'auth.html'; return; }
+      if (Courses.enroll(user.id, courseId)) {
+        toast('წარმატებით დარეგისტრირდი! 🎓', 'success');
+        init();
+      }
+    }
+
+    function submitAssignment() {
+      const answer = document.getElementById('assignment-answer')?.value.trim();
+      if (!answer) return toast('პასუხი ცარიელია', 'error');
+      const grade = Math.floor(Math.random() * 30) + 70; // 70-100
+      Submissions.add({ assignment_id: activeLessonIdx + 1, student_id: user.id, content: answer, grade });
+      toast(`დავალება გაიგზავნა! შეფასება: ${grade}/100 🎯`, 'success');
+    }
+
+    init();
+  </script>
+</body>
+</html>
