@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LMS.ge — Admin Panel</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { margin-top: 64px; }
+
+    .layout-sidebar { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
+
+    .sidebar {
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 0.75rem;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+    }
+    .admin-avatar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.75rem;
+      margin-bottom: 1.5rem;
+      background: var(--bg3);
+      border-radius: var(--radius-sm);
+    }
+    .avatar-circle {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent-bg);
+      border: 1px solid rgba(108,99,255,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--accent2);
+    }
+    .avatar-name { font-size: 13px; font-weight: 500; color: var(--text); }
+    .avatar-role { font-size: 11px; color: var(--muted); }
+
+    /* Main content */
+    .main-content { padding: 2rem; }
+
+    /* Panel sections */
+    .admin-section { display: none; }
+    .admin-section.active { display: block; animation: fadeIn 0.2s ease; }
+
+    /* ADD COURSE FORM */
+    .add-course-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      max-width: 640px;
+      margin-bottom: 2rem;
+    }
+
+    /* COURSE MANAGEMENT TABLE */
+    .course-manage-row {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.6rem;
+      transition: border-color 0.15s;
+    }
+    .course-manage-row:hover { border-color: var(--border2); }
+    .manage-thumb {
+      width: 48px; height: 48px;
+      background: var(--bg3);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+    }
+    .manage-info h4 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .manage-info p  { font-size: 12px; color: var(--muted); }
+    .manage-actions { display: flex; gap: 6px; }
+
+    /* STUDENTS TABLE */
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .user-row:last-child { border-bottom: none; }
+    .user-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--bg3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 600;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .user-info { flex: 1; }
+    .user-info .name { font-size: 14px; font-weight: 500; }
+    .user-info .email { font-size: 12px; color: var(--muted); }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar"></nav>
+
+  <div class="layout-sidebar">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="admin-avatar" id="admin-avatar"></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">მართვა</div>
+        <button class="sidebar-item active" onclick="showSection('courses', this)">
+          <span class="icon">📚</span> კურსები
+        </button>
+        <button class="sidebar-item" onclick="showSection('add-course', this)">
+          <span class="icon">➕</span> კურსის დამატება
+        </button>
+        <button class="sidebar-item" onclick="showSection('lessons', this)">
+          <span class="icon">🎬</span> გაკვეთილები
+        </button>
+        <button class="sidebar-item" onclick="showSection('students', this)">
+          <span class="icon">👥</span> სტუდენტები
+        </button>
+        <button class="sidebar-item" onclick="showSection('submissions', this)">
+          <span class="icon">📝</span> შეფასებები
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">სისტემა</div>
+        <button class="sidebar-item" onclick="window.location.href='index.html'">
+          <span class="icon">🏠</span> კატალოგი
+        </button>
+        <button class="sidebar-item" onclick="Auth.logout()">
+          <span class="icon">🚪</span> გასვლა
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- COURSES LIST -->
+      <div class="admin-section active" id="section-courses">
+        <div class="page-header">
+          <h2 class="page-title">📚 კურსების მართვა</h2>
+          <p class="page-subtitle">ყველა კურსის რედაქტირება და წაშლა</p>
+        </div>
+        <div id="courses-list"></div>
+      </div>
+
+      <!-- ADD COURSE -->
+      <div class="admin-section" id="section-add-course">
+        <div class="page-header">
+          <h2 class="page-title">➕ ახალი კურსი</h2>
+          <p class="page-subtitle">შეავსე ყველა ველი</p>
+        </div>
+
+        <div class="add-course-card">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">კურსის სახელი</label>
+              <input type="text" class="form-input" id="c-title" placeholder="მაგ: JavaScript Advanced">
+            </div>
+            <div class="form-group">
+              <label class="form-label">კატეგორია</label>
+              <select class="form-input" id="c-category">
+                <option value="frontend">Frontend</option>
+                <option value="backend">Backend</option>
+                <option value="data">Data Science</option>
+                <option value="design">Design</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">აღწერა</label>
+            <textarea class="form-input" id="c-desc" rows="3" placeholder="კურსის შინაარსი..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">ხანგრძლივობა</label>
+              <input type="text" class="form-input" id="c-duration" placeholder="მაგ: 30 საათი">
+            </div>
+            <div class="form-group">
+              <label class="form-label">დონე</label>
+              <select class="form-input" id="c-level">
+                <option value="დამწყები">დამწყები</option>
+                <option value="საშუალო">საშუალო</option>
+                <option value="მოწინავე">მოწინავე</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">გაკვეთილების რაოდენობა</label>
+              <input type="number" class="form-input" id="c-lessons" placeholder="0" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Emoji (thumbnail)</label>
+              <input type="text" class="form-input" id="c-thumb" placeholder="🎯" maxlength="4">
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="addCourse()">კურსის შექმნა →</button>
+        </div>
+      </div>
+
+      <!-- LESSONS -->
+      <div class="admin-section" id="section-lessons">
+        <div class="page-header">
+          <h2 class="page-title">🎬 გაკვეთილების მართვა</h2>
+          <p class="page-subtitle">კურსი შეარჩიე, გაკვეთილი დაამატე</p>
+        </div>
+
+        <div class="add-course-card">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">კურსი</label>
+              <select class="form-input" id="l-course"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">გაკვეთილის სახელი</label>
+              <input type="text" class="form-input" id="l-title" placeholder="მაგ: Promises და async/await">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">ხანგრძლივობა</label>
+              <input type="text" class="form-input" id="l-duration" placeholder="45 წთ">
+            </div>
+            <div class="form-group">
+              <label class="form-label">კონტენტის URL</label>
+              <input type="text" class="form-input" id="l-url" placeholder="https://...">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addLesson()">გაკვეთილის დამატება →</button>
+        </div>
+
+        <div id="lessons-list"></div>
+      </div>
+
+      <!-- STUDENTS -->
+      <div class="admin-section" id="section-students">
+        <div class="page-header">
+          <h2 class="page-title">👥 სტუდენტები</h2>
+          <p class="page-subtitle">ყველა დარეგისტრირებული მომხმარებელი</p>
+        </div>
+        <div class="add-course-card" style="max-width:100%;padding:0;overflow:hidden">
+          <div id="students-list"></div>
+        </div>
+      </div>
+
+      <!-- SUBMISSIONS -->
+      <div class="admin-section" id="section-submissions">
+        <div class="page-header">
+          <h2 class="page-title">📝 შეფასებები</h2>
+          <p class="page-subtitle">სტუდენტების ყველა დავალება</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>სტუდენტი ID</th>
+                <th>დავალება</th>
+                <th>თარიღი</th>
+                <th>შეფასება</th>
+                <th>მოქმედება</th>
+              </tr>
+            </thead>
+            <tbody id="submissions-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">⚠️ კურსის წაშლა</div>
+        <button class="modal-close" onclick="closeModal('delete-modal')">✕</button>
+      </div>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:1.5rem">
+        დარწმუნებული ხარ, რომ გინდა ამ კურსის წაშლა? ეს ქმედება შეუქცევადია.
+      </p>
+      <div class="flex gap-1" style="justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="closeModal('delete-modal')">გაუქმება</button>
+        <button class="btn btn-danger" id="confirm-delete">წაშლა</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.isLoggedIn() || !Auth.isAdmin()) {
+      toast('ამ გვერდზე წვდომა არ გაქვს', 'error');
+      setTimeout(() => window.location.href = 'dashboard.html', 1000);
+    }
+
+    renderNavbar({ activePage: 'admin' });
+    const user = Auth.getUser();
+
+    // Admin avatar
+    document.getElementById('admin-avatar').innerHTML = `
+      <div class="avatar-circle">${user.username[0].toUpperCase()}</div>
+      <div>
+        <div class="avatar-name">${user.username}</div>
+        <div class="avatar-role">Administrator</div>
+      </div>
+    `;
+
+    // Section switcher
+    function showSection(name, btn) {
+      document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+      document.getElementById('section-' + name).classList.add('active');
+      btn.classList.add('active');
+
+      if (name === 'courses')     renderCourses();
+      if (name === 'lessons')     renderLessons();
+      if (name === 'students')    renderStudents();
+      if (name === 'submissions') renderSubmissions();
+    }
+
+    // RENDER COURSES
+    function renderCourses() {
+      const courses = Courses.all();
+      document.getElementById('courses-list').innerHTML = courses.map(c => `
+        <div class="course-manage-row fade-in">
+          <div class="manage-thumb">${c.thumbnail}</div>
+          <div class="manage-info">
+            <h4>${c.title}</h4>
+            <p>${c.category} · ${c.level} · ${c.lessons} გაკვეთილი · 👤 ${c.enrolled}</p>
+          </div>
+          <div class="manage-actions">
+            <a href="lesson.html?course=${c.id}" class="btn btn-ghost btn-sm">ნახვა</a>
+            <button class="btn btn-danger btn-sm" onclick="confirmDelete(${c.id})">წაშლა</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // DELETE
+    let deleteTarget = null;
+    function confirmDelete(id) {
+      deleteTarget = id;
+      openModal('delete-modal');
+    }
+    document.getElementById('confirm-delete').onclick = () => {
+      if (!deleteTarget) return;
+      Courses.deleteCourse(deleteTarget);
+      deleteTarget = null;
+      closeModal('delete-modal');
+      toast('კურსი წაიშალა', 'info');
+      renderCourses();
+    };
+
+    // ADD COURSE
+    function addCourse() {
+      const title    = document.getElementById('c-title').value.trim();
+      const desc     = document.getElementById('c-desc').value.trim();
+      const category = document.getElementById('c-category').value;
+      const level    = document.getElementById('c-level').value;
+      const duration = document.getElementById('c-duration').value.trim() || '0 საათი';
+      const lessons  = parseInt(document.getElementById('c-lessons').value) || 0;
+      const thumb    = document.getElementById('c-thumb').value.trim() || '📘';
+
+      if (!title || !desc) return toast('სათაური და აღწერა სავალდებულოა', 'error');
+
+      Courses.addCourse({ title, description: desc, category, level, duration, lessons, thumbnail: thumb, instructor_id: user.id });
+      toast('კურსი დამატებულია! ✓', 'success');
+
+      // Clear
+      ['c-title','c-desc','c-duration','c-lessons','c-thumb'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    // LESSONS
+    function renderLessons() {
+      const courses = Courses.all();
+      const sel = document.getElementById('l-course');
+      sel.innerHTML = courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+
+      const lessons = DB.get('lessons');
+      document.getElementById('lessons-list').innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>კურსი</th><th>სახელი</th><th>ხანგრძლივობა</th><th>თანმიმდევრობა</th></tr></thead>
+            <tbody>
+              ${lessons.map(l => {
+                const course = Courses.byId(l.course_id);
+                return `<tr>
+                  <td class="text-sm text-muted">${course?.title?.slice(0,30) || '—'}...</td>
+                  <td>${l.title}</td>
+                  <td>${l.duration}</td>
+                  <td><span class="badge badge-muted">#${l.order}</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    function addLesson() {
+      const course_id = parseInt(document.getElementById('l-course').value);
+      const title     = document.getElementById('l-title').value.trim();
+      const duration  = document.getElementById('l-duration').value.trim() || '30 წთ';
+      const url       = document.getElementById('l-url').value.trim() || '#';
+
+      if (!title) return toast('სახელი სავალდებულოა', 'error');
+
+      const lessons = DB.get('lessons');
+      const maxOrder = Math.max(0, ...lessons.filter(l => l.course_id === course_id).map(l => l.order));
+      lessons.push({ id: Date.now(), course_id, title, content_url: url, duration, order: maxOrder + 1 });
+      DB.set('lessons', lessons);
+      toast('გაკვეთილი დამატებულია! ✓', 'success');
+      renderLessons();
+
+      document.getElementById('l-title').value = '';
+      document.getElementById('l-duration').value = '';
+      document.getElementById('l-url').value = '';
+    }
+
+    // STUDENTS
+    function renderStudents() {
+      const users = DB.get('users');
+      const enrollments = DB.get('enrollments');
+
+      document.getElementById('students-list').innerHTML = users.map(u => {
+        const userEnrollments = enrollments.filter(e => e.user_id === u.id);
+        return `
+        <div class="user-row">
+          <div class="user-avatar">${u.username[0].toUpperCase()}</div>
+          <div class="user-info">
+            <div class="name">${u.username}</div>
+            <div class="email">${u.email}</div>
+          </div>
+          <span class="badge badge-${u.role === 'admin' ? 'amber' : 'green'}">${u.role}</span>
+          <span class="text-sm text-muted" style="min-width:80px;text-align:right">${userEnrollments.length} კურსი</span>
+        </div>`;
+      }).join('');
+    }
+
+    // SUBMISSIONS
+    function renderSubmissions() {
+      const subs = Submissions.all();
+      const users = DB.get('users');
+      document.getElementById('submissions-table').innerHTML = subs.map(s => {
+        const student = users.find(u => u.id === s.student_id);
+        const gradeClass = s.grade >= 80 ? 'green' : s.grade >= 60 ? 'amber' : 'red';
+        return `<tr>
+          <td>${student?.username || '#' + s.student_id}</td>
+          <td>დავალება #${s.assignment_id}</td>
+          <td class="text-muted text-sm">${s.submitted_at}</td>
+          <td><span class="badge badge-${gradeClass}">${s.grade}/100</span></td>
+          <td><button class="btn btn-ghost btn-sm" onclick="toast('შეფასება განახლებულია','success')">შეფასება</button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Initial render
+    renderCourses();
+  </script>
+</body>
+</html>
