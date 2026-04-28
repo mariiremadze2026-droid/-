@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LMS.ge — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { margin-top: 64px; }
+
+    .dashboard-hero {
+      background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    .welcome-text h2 {
+      font-family: var(--font-head);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .welcome-text p { color: var(--muted); font-size: 14px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .my-courses-wrap { padding: 2rem; }
+
+    .course-row-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      transition: border-color 0.2s, transform 0.2s;
+      text-decoration: none;
+    }
+    .course-row-card:hover {
+      border-color: var(--border2);
+      transform: translateX(3px);
+    }
+    .course-row-thumb {
+      width: 60px; height: 60px;
+      background: var(--bg3);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+    }
+    .course-row-info h4 {
+      font-family: var(--font-head);
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    .course-row-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .course-row-right { text-align: right; min-width: 120px; }
+    .progress-label {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .activity-section { padding: 0 2rem 2rem; }
+    .section-title {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .activity-text { font-size: 14px; color: var(--text); }
+    .activity-time { font-size: 12px; color: var(--muted); }
+
+    .empty-courses {
+      text-align: center;
+      padding: 3rem;
+      background: var(--bg2);
+      border: 1px dashed var(--border2);
+      border-radius: var(--radius-lg);
+      color: var(--muted);
+    }
+    .empty-courses .icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .empty-courses h3 { font-family: var(--font-head); font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
+    .empty-courses p { font-size: 14px; margin-bottom: 1.25rem; }
+
+    .submissions-wrap { padding: 0 2rem 2rem; }
+    .grade-pill {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .grade-pill.high { color: var(--green); }
+    .grade-pill.mid  { color: var(--amber); }
+    .grade-pill.low  { color: var(--red); }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar"></nav>
+
+  <div id="dashboard-content"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.isLoggedIn()) {
+      window.location.href = 'auth.html';
+    }
+
+    renderNavbar({ activePage: 'dashboard' });
+    const user = Auth.getUser();
+
+    function render() {
+      const enrollments = Courses.userEnrollments(user.id);
+      const submissions = Submissions.byStudent(user.id);
+
+      // Stats
+      const totalCourses   = enrollments.length;
+      const completed      = enrollments.filter(e => e.progress === 100).length;
+      const avgProgress    = totalCourses ? Math.round(enrollments.reduce((s, e) => s + e.progress, 0) / totalCourses) : 0;
+      const avgGrade       = submissions.length ? Math.round(submissions.reduce((s, sub) => s + sub.grade, 0) / submissions.length) : 0;
+
+      document.getElementById('dashboard-content').innerHTML = `
+        <!-- HERO -->
+        <div class="dashboard-hero fade-in">
+          <div class="welcome-text">
+            <h2>გამარჯობა, ${user.username}! 👋</h2>
+            <p>გააგრძელე სადაც შეჩერდი — შენი პროგრესი გელოდება.</p>
+          </div>
+          <div class="flex gap-1 flex-wrap">
+            <a href="index.html" class="btn btn-outline">+ ახალი კურსი</a>
+            <span class="badge badge-${user.role === 'admin' ? 'amber' : 'green'}" style="padding: 8px 16px; font-size: 13px;">
+              ${user.role === 'admin' ? '🛡 Admin' : '🎓 სტუდენტი'}
+            </span>
+          </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-row fade-in fade-in-delay-1">
+          <div class="stat-card">
+            <div class="stat-label">სულ კურსი</div>
+            <div class="stat-value">${totalCourses}</div>
+            <div class="stat-sub">რეგისტრირებული</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">საშუალო პროგრესი</div>
+            <div class="stat-value">${avgProgress}%</div>
+            <div class="stat-sub">ყველა კურსში</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">დასრულებული</div>
+            <div class="stat-value">${completed}</div>
+            <div class="stat-sub">კურსი</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">საშუალო შეფასება</div>
+            <div class="stat-value">${avgGrade || '—'}${avgGrade ? '/100' : ''}</div>
+            <div class="stat-sub">${submissions.length} დავალება</div>
+          </div>
+        </div>
+
+        <!-- MY COURSES -->
+        <div class="my-courses-wrap fade-in fade-in-delay-2">
+          <div class="section-title">📚 ჩემი კურსები</div>
+          ${enrollments.length === 0 ? `
+            <div class="empty-courses">
+              <div class="icon">🎓</div>
+              <h3>კურსი ჯერ არ გაქვს</h3>
+              <p>დაიწყე სწავლება — ათობით კურსი გელოდება.</p>
+              <a href="index.html" class="btn btn-primary">კატალოგის ნახვა →</a>
+            </div>
+          ` : enrollments.map(e => `
+            <a href="lesson.html?course=${e.course_id}" class="course-row-card">
+              <div class="course-row-thumb">${e.course?.thumbnail || '📘'}</div>
+              <div class="course-row-info">
+                <h4>${e.course?.title || 'კურსი'}</h4>
+                <div class="course-row-meta">📚 ${e.course?.lessons || 0} გაკვეთილი · ⏱ ${e.course?.duration || ''}</div>
+                <div class="progress-wrap" style="width: 220px">
+                  <div class="progress-fill ${e.progress === 100 ? 'green' : ''}" style="width:${e.progress}%"></div>
+                </div>
+              </div>
+              <div class="course-row-right">
+                <div class="progress-label">${e.progress}%</div>
+                ${e.progress === 100
+                  ? '<span class="badge badge-green">✓ დასრულებულია</span>'
+                  : '<span class="badge badge-accent">გაგრძელება →</span>'
+                }
+              </div>
+            </a>
+          `).join('')}
+        </div>
+
+        <!-- SUBMISSIONS -->
+        ${submissions.length > 0 ? `
+        <div class="submissions-wrap fade-in fade-in-delay-3">
+          <div class="section-title">📝 ჩემი შეფასებები</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>დავალება #</th>
+                  <th>გაგზავნის თარიღი</th>
+                  <th>შეფასება</th>
+                  <th>სტატუსი</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${submissions.map(s => {
+                  const gradeClass = s.grade >= 80 ? 'high' : s.grade >= 60 ? 'mid' : 'low';
+                  return `
+                  <tr>
+                    <td>დავალება #${s.assignment_id}</td>
+                    <td class="text-muted text-sm">${s.submitted_at}</td>
+                    <td><span class="grade-pill ${gradeClass}">${s.grade}/100</span></td>
+                    <td>
+                      <span class="badge badge-${gradeClass === 'high' ? 'green' : gradeClass === 'mid' ? 'amber' : 'red'}">
+                        ${gradeClass === 'high' ? 'შესანიშნავი' : gradeClass === 'mid' ? 'კარგი' : 'გააუმჯობესე'}
+                      </span>
+                    </td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- ACTIVITY -->
+        <div class="activity-section fade-in fade-in-delay-4">
+          <div class="section-title">⚡ ბოლო აქტივობა</div>
+          <div>
+            ${enrollments.length > 0 ? enrollments.slice(-3).reverse().map(e => `
+              <div class="activity-item">
+                <div class="activity-dot"></div>
+                <div>
+                  <div class="activity-text">დარეგისტრირდი: <strong>${e.course?.title}</strong></div>
+                  <div class="activity-time">${e.enrolled_at}</div>
+                </div>
+              </div>
+            `).join('') : '<p class="text-muted text-sm">აქტივობა არ არის</p>'}
+          </div>
+        </div>
+      `;
+    }
+
+    render();
+  </script>
+</body>
+</html>
